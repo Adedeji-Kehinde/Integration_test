@@ -1,169 +1,102 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://js.braintreegateway.com/web/3.109.0/js/client.min.js"></script>
-    <script src="https://js.braintreegateway.com/web/3.109.0/js/apple-pay.min.js"></script>
-    <title>Apple Pay Demo</title>
-    <style>
-      #apple_div {
-        display: none;
-      }
-      body {
-        background: #eef2f7;
-        text-align: center;
-      }
-      apple-pay-button {
-        --apple-pay-button-width: 140px;
-        --apple-pay-button-height: 30px;
-        --apple-pay-button-border-radius: 5px;
-        --apple-pay-button-padding: 5px 0px;
-      }
-      #pay-by-apple {
-        height: 50px;
-        width: 200px;
-      }
-      #compatabilityMessage {
-        border: 1px solid black;
-      }
-    </style>
+    <script src="https://js.braintreegateway.com/web/dropin/1.31.2/js/dropin.min.js"></script>
+    <title>Dropin Demo</title>
   </head>
   <body>
-    <div id="compatabilityMessage"></div>
-    <div id="apple_div">
-      <form
-        id="applePayForm"
-        action="/checkout"
-        method="post"
-      >
-        <input type="hidden" name="payment_method_nonce" value="" />
-        <input
-          type="image"
-          src="https://www.snbonline.com/filesimages/landing/Mobile%20Wallet/buy-with-apple-pay.png"
-          name="saveForm"
-          class="submit"
-          id="pay-by-apple"
-        />
-      </form>
+    <h1>Dropin Demo</h1>
+    <div id="dropin-wrapper">
+      <div id="dropin-container"></div>
+      <button id="submit-button">Submit payment</button>
     </div>
+    <hr />
+    <div id="divResponse"></div>
     <script>
-      // Checks to see if the ApplePay session can be started
-      if (
-        window.ApplePaySession &&
-        ApplePaySession.supportsVersion(3) &&
-        ApplePaySession.canMakePayments()
-      ) {
-        console.log("This browser supports Apple Pay");
-        // Start the Braintree Client
-        fetch("/checkout")
-          .then((response) => {
-            return response.text();
-          })
-          .then((client_token) => {
-            return braintree.client.create({
+      var submitButton = document.getElementById("submit-button");
+      const setAmount = "10.00";
+      var threeDSecureParameters = {
+        amount: setAmount,
+        email: "test@example.com",
+        billingAddress: {
+          givenName: "Jill",
+          surname: "Doe",
+          phoneNumber: "8101234567",
+          streetAddress: "555 Smith St.",
+          extendedAddress: "#5",
+          locality: "Oakland",
+          region: "CA",
+          postalCode: "12345",
+          countryCodeAlpha2: "US",
+        },
+      };
+      fetch("/checkout")
+        .then((response) => {
+          return response.text();
+        })
+        .then((client_token) => {
+          braintree.dropin.create(
+            {
+              // https://braintree.github.io/braintree-web-drop-in/docs/current/module-braintree-web-drop-in.html#.create
               authorization: client_token,
-            });
-          })
-          .then((clientInstance) => {
-            return braintree.applePay.create({
-              client: clientInstance,
-            });
-          })
-          .then((applePayInstance) => {
-            btApplePayInstance = applePayInstance;
-            document.getElementById("apple_div").style.display = "inline";
-          })
-          .catch((err) => {
-            console.log(err);
-          });
-        document
-          .getElementById("pay-by-apple")
-          .addEventListener("click", (clickEvent) => {
-            clickEvent.preventDefault();
-            var paymentRequest = btApplePayInstance.createPaymentRequest({
-              total: {
-                label: "Test merchant",
-                amount: 15,
-              },
-              // You can setup the required fields here, so the buyer would be prompted to provide them during checkout!
-              requiredShippingContactFields: [
-                "name",
-                "phone",
-                "email",
-                "postalAddress",
-              ],
-              requiredBillingContactFields: [
-                "postalAddress",
-                "name",
-                "phone",
-                "email",
-              ],
-              shippingContact: {
-                givenName: "Test",
-                familyName: "customer",
-                addressLines: ["1st line of the address"],
-                locality: "Hollywood",
-                administrativeArea: "CA",
-                postalCode: "90210",
-                country: "US",
-                phoneNumber: "2535555555",
-                emailAddress: "usa@customer.com",
-              },
-              billingContact: {
-                givenName: "Test",
-                familyName: "Customer",
-                addressLines: ["1 Yes you can pass address"],
-                locality: "Hollywood",
-                administrativeArea: "CA",
-                postalCode: "90210",
-                country: "US",
-                phoneNumber: "2535555555",
-                emailAddress: "usa@customer.com",
-              },
-            });
-            var session = new ApplePaySession(1, paymentRequest);
-            session.onvalidatemerchant = (event) => {
-              btApplePayInstance
-                .performValidation({
-                  validationURL: event.validationURL,
-                  displayName: "Test merchant",
-                })
-                .then((merchantSession) => {
-                  session.completeMerchantValidation(merchantSession);
-                });
-            };
-            session.onpaymentauthorized = (event) => {
-              btApplePayInstance
-                .tokenize({
-                  token: event.payment.token,
-                })
-                .then((payload) => {
-                  session.completePayment(ApplePaySession.STATUS_SUCCESS);
-                  alert(`Payment nonce: ${payload.nonce}`);
-                  fetch("/checkout", {
-                    method: "POST",
-                    body: JSON.stringify({
-                      paymentMethodNonce: payload.nonce,
-                      // deviceData: deviceData,
-                      amount: "15.00",
-                    }),
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                  });
-                });
-            };
-            session.begin();
-          });
-      } else {
-        document.getElementById(
-          "compatabilityMessage"
-        ).innerHTML = `<h3>Apple Pay is not supported with ${
-          navigator.userAgent.split(" ")[0]
-        }, Please use <a href="https://www.apple.com/safari/">Apple Safari web browser</a>, or an IOS device.</h3>`;
-      }
+              container: "#dropin-container",
+              dataCollector: true,
+              amount: setAmount,
+              // vault: { allowVaultCardOverride: true },
+              threeDSecure: { authorization: client_token, version: 2 },
+            },
+            (componentError, instance) => {
+              if (componentError) {
+                console.log(componentError);
+              }
+              submitButton.addEventListener("click", (e) => {
+                e.preventDefault();
+                instance.requestPaymentMethod(
+                  { threeDSecure: threeDSecureParameters },
+                  (ReqPayMethodError, payload) => {
+                    fetch("/checkout", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        paymentMethodNonce: payload.nonce,
+                        // deviceData: deviceData,
+                        amount: setAmount,
+                      }),
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                    })
+                      .then((response) => response.json())
+                      .then((result) => {
+                        instance.teardown((teardownErr) => {
+                          if (teardownErr) {
+                            console.error("Could not tear down Drop-in UI!");
+                          } else {
+                            console.info("Drop-in UI has been torn down!");
+                          }
+                        });
+                        if (result.success) {
+                          document.getElementById("divResponse").innerHTML = 
+                            "<pre>Transaction successful\n\n" +
+                            JSON.stringify(result, null, 4) +
+                            "</pre>";
+                        } else {
+                          document.getElementById("divResponse").innerHTML = 
+                            "<pre>Transaction failed\n\n" +
+                            JSON.stringify(result, null, 4) +
+                            "</pre>";
+                        }
+                      });
+                  }
+                );
+              });
+            }
+          );
+        });
     </script>
   </body>
 </html>
+ 
