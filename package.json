@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "braintree": "^3.26.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
