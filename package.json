@@ -1,20 +1,16 @@
 {
-<<<<<<< HEAD
-  "name": "@paypalcorp/integration_test",
-=======
-  "dependencies": {
-    "braintree": "^3.26.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2"
-  },
   "name": "integration_test",
->>>>>>> refs/remotes/origin/main
   "version": "1.0.0",
+  "description": "",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "dependencies": {
+    "braintree": "^3.26.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
 }
